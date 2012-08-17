@@ -31,7 +31,7 @@ and store it under data/tiny.
 By running create_lsh_codes.m (a matlab snippet) you can generate binary codes from
 the above datasets using random projections (LSH, "Similarity estimation techniques
 from rounding algorithms, M. Charikar, STOC. 2002"). By changing the first few lines
-of create_lsh_codes, you can control the parameteres of the matlab snippet. See
+of create_lsh_codes, you can control the parameters of the matlab snippet. See
 create_lsh_codes.m for more details.
 
 
