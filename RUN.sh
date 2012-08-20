@@ -1,13 +1,33 @@
+# change your_matlab_root_dir to your matlab root dir
+your_matlab_root_dir=
+
+# add matlab to the PATH if it is not already there
+# download the data, and create data/inria/ folder that includes ANN_SIFT1B folder and files
+
+
+if [ "$your_matlab_root_dir" = "" ]
+then
+    echo "set your_matlab_root_dir to your matlab root dir."
+    exit
+fi
+
+if [ ! -d data/inria ]
+then
+    echo data/inria/ANN_SIFT1B does not exists.
+    exit
+fi
+
+
 # compilation
 mkdir -p build
 cd build
-cmake .. -DMATLABROOT=***your_matlab_root_dir***
+cmake .. -DMATLABROOT=$your_matlab_root_dir
 make
 cd ..
 
 # creation of the binary codes
 # runs matlab, and then create_lsh_codes script inside it. Then exits.
-matlab -nojvm -nodisplay -nosplash -r "create_lsh_codes;quit";
+command -v matlab -nojvm -nodisplay -nosplash -r "create_lsh_codes;quit" || {echo "matlab could not found"; exit}
 
 # number of substrings to be used for each case and running
 # multi-index hashing for 12 different subsets of the data
