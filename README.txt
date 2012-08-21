@@ -38,6 +38,9 @@ snippet. See create_lsh_codes.m for more details.
 
 ~~~~~~~~~~~~~~ Usage
 
+~~~ RUN.sh: is a bash script that provides an example run of the
+program for 64-bit codes.
+
 ~~~ linscan: provides an efficient implementation of exhaustive linear scan for
 kNN in Hamming distance on binary codes. (for comparison)
 
@@ -69,7 +72,6 @@ Note that '-nMs 1 10 100 1000' lets the program know that we intend to run the
 experiments on 4 subsets of the dataset (with 1M, 10M, 100M, and 1B data points)
 and '-nM i' specifies the index of the subset that should be used for the current
 run of the program (eg, here -nM3 corresponds to 100M).
-
 
 ~~~ mih: provides an implementation of multi-index hashing for fast exact kNN in
 Hamming distance on binary codes.
