@@ -100,7 +100,9 @@ please refer to license.txt file.
 
 The code reads the full matrix of binary codes B each time, regardless of N (or
 nMs[nM]) which takes time and storage. It would be nice if we can only read the
-first N columns of B using http://www.hdfgroup.org/HDF5/.
+first N columns of B (probably using http://www.hdfgroup.org/HDF5/). Because of
+this problem, the current estimate of storage is not accurate and it includes the
+full matrix B.
 
 Improve SparseHashtable insertion speed. It is currently very slow, but can be
 improved in different ways.
