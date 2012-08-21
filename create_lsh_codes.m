@@ -20,6 +20,8 @@ CACHE_DIR = 'cache';
 
 if (~exist(outputdir, 'file'))
   mkdir(outputdir);
+end
+if (~exist(CACHE_DIR, 'file'))
   mkdir(CACHE_DIR);
 end
 
