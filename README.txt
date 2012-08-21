@@ -86,6 +86,13 @@ determine the number of hash tables / substrings to use. The code is set up such
 it performs kNN for all k in {1, 10, 100, 1000} so the -K argument is not used.
 
 
+~~~~~~~~~~~~~ License
+
+Copyright (c) 2012, Mohammad Norouzi <mohammad.n@gmail.com> and Ali
+Punjani <alipunjani@cs.toronto.edu>. This is a free software; for
+license information please refer to license.txt file.
+
+
 ~~~~~~~~~~~~~~ TODO
 
 The code reads the full matrix of binary codes B each time, regardless of N (or
