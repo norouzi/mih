@@ -121,7 +121,7 @@ int main (int argc, char**argv) {
     /* Loading the codes and queries from the input file */	
     ifp = matOpen (infile, "r");
     if (!ifp) {
-	printf ("Failed to open input file. Exiting.\n");
+	printf ("Failed to open input file. Aborting.\n");
 	return EXIT_FAILURE;
     }
 
@@ -272,7 +272,7 @@ int main (int argc, char**argv) {
     /* Opening the output file for writing the results */
     MATFile *ofp = matOpen (outfile, "w");
     if (!ofp) {
-	printf ("Failed to create/open output file. Exiting.\n");
+	printf ("Failed to create/open output file. Aborting.\n");
 	return EXIT_FAILURE;
     }
 			
