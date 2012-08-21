@@ -25,6 +25,7 @@ if (~exist(CACHE_DIR, 'file'))
   mkdir(CACHE_DIR);
 end
 
+addpath matlab;
 addpath([TINY_HOME, '/code']);
 addpath([INRIA_HOME, '/matlab']);
 
