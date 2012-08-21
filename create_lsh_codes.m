@@ -3,7 +3,10 @@
 dataset_name = 'sift_1B';
 
 % nb controls the lenght of the binary codes generated.
-nb = 64;
+% nb can be set from outside.
+if (~exist('nb', 'var'))
+  nb = 64;
+end
 
 % Where the corresponding datasets are stored:
 TINY_HOME = 'data/tiny'; 		% the root of 80 million tiny images dataset
@@ -12,15 +15,15 @@ INRIA_HOME = 'data/inria';		% the root of INIRA BIGANN datasets
 % Where the output matrix of binary codes should be stored:
 outputdir = 'codes/lsh';
 
-if (~exist(outputdir, 'file'))
-  mkdir(outputdir);
-end
-
 % CACHE_DIR is used to store the data mean for the datasets.
 CACHE_DIR = 'cache';
 
-addpath matlab;
-addpath([TINY_HOME, '/mycode']);
+if (~exist(outputdir, 'file'))
+  mkdir(outputdir);
+  mkdir(CACHE_DIR);
+end
+
+addpath([TINY_HOME, '/code']);
 addpath([INRIA_HOME, '/matlab']);
 
 if strcmp(dataset_name, 'sift_1M')
@@ -46,7 +49,7 @@ elseif strcmp(dataset_name, 'gist_80M')
 end
 
 if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
-  fprintf('Computing the data men for the given dataset... ');
+  fprintf('Computing the data mean for the given dataset... ');
   if strcmp(dataset_name, 'sift_1M')
     trdata = fvecs_read([datahome, '/ANN_SIFT1M/sift/sift_learn.fvecs']);
     learn_mean = mean(trdata, 2);
