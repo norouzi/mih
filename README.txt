@@ -45,7 +45,7 @@ linscan <infile> <outfile> [options]
 
 Options:
  -nMs <n1 n2 ..>  An array of multiples of one million items that we intend to run the experiments on them
- -nM <number>     The index from the nMs array to be used for the current run (first is 1)
+ -nM <number>     The index from the nMs array to be used for this run (first is 1)
  -Q <number>      The number of query points to use from <infile>, default all
  -K <number>      The number of results to return per query, default 100 (k in kNN)
  -B <number>      The number of bits per code, default autodetect
@@ -61,9 +61,9 @@ codes/lsh/lsh_128_sift_1B.mat, running the above lines will create an output fil
 cache/linscan_128_1B.mat, which stores the results and timings for 100-NN search
 on 1 million, 10 million, 100 million, and 1 billion binary codes. If the output
 file does not exist (the first time), the output file is created with the
-appropriate number of elements in an struct array (depending on -nMs <n1 n2 n3
-...>). If the output file exists (from the second time), the file is appended with
-the new results.
+appropriate number of elements in an struct array (based on -nMs <n1 n2 ..>). If
+the output file exists (from the second time), the file is appended with the new
+results.
 
 Note that '-nMs 1 10 100 1000' lets the program know that we intend to run the
 experiments on 4 subsets of the dataset (with 1M, 10M, 100M, and 1B data points)
@@ -78,7 +78,7 @@ mih <infile> <outfile> [options]
 
 Options:
  -nMs <n1 n2 ..>  An array of multiples of one million items that we intend to run the experiments on them
- -nM <number>     The index from the nMs array to be used for the current run (first is 1)
+ -nM <number>     The index from the nMs array to be used for this run (first is 1)
  -Q <number>      The number of query points to use from <infile>, default all
  -B <number>      The number of bits per code, default autodetect
  -m <number>      The number of substrings to use, default 1
