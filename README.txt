@@ -38,8 +38,8 @@ snippet. See create_lsh_codes.m for more details.
 
 ~~~~~~~~~~~~~~ Usage
 
-~~~ linscan: provides an efficient implementation of exhaustive linear scan for kNN in
-Hamming distance on binary codes. (for comparison)
+~~~ linscan: provides an efficient implementation of exhaustive linear scan for
+kNN in Hamming distance on binary codes. (for comparison)
 
 linscan <infile> <outfile> [options]
 
