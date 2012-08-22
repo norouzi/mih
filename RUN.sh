@@ -1,5 +1,5 @@
 # change matlab_root_dir to your matlab root dir
-matlab_root_dir=/pkgs/matlab-7.14
+matlab_root_dir=
 
 # add matlab to the PATH if it is not already there
 # download the data, and create data/inria/ folder that includes ANN_SIFT1B folder and files
