@@ -16,13 +16,13 @@ MESSAGE (STATUS ${MATLAB_LIBRARIES})
 include_directories ("${PROJECT_SOURCE_DIR}/include")
 include_directories (${MATLAB_INCLUDE_DIR})
 
-add_executable (mih array32.cpp mihasher.cpp sparse_hashtable.cpp bucket_group.cpp interface/mih_interface.cpp)
+add_executable (mih src/array32.cpp src/mihasher.cpp src/sparse_hashtable.cpp src/bucket_group.cpp interface/mih_interface.cpp)
 
 target_link_libraries (mih ${MATLAB_LIBRARIES})
 
 
 project (linscan)
 
-add_executable (linscan linscan.cpp interface/linscan_interface.cpp)
+add_executable (linscan src/linscan.cpp interface/linscan_interface.cpp)
 
 target_link_libraries (linscan ${MATLAB_LIBRARIES})
