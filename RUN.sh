@@ -1,14 +1,14 @@
-# change your_matlab_root_dir to your matlab root dir
-your_matlab_root_dir=
+# change matlab_root_dir to your matlab root dir
+matlab_root_dir=
 
 # add matlab to the PATH if it is not already there
 # download the data, and create data/inria/ folder that includes ANN_SIFT1B folder and files
 
 
 # some sanity checks
-if [ "$your_matlab_root_dir" = "" ]
+if [ "$matlab_root_dir" = "" ]
 then
-    echo "set your_matlab_root_dir to your matlab root dir."
+    echo "set matlab_root_dir to your matlab root dir."
     exit 1
 fi
 if [ ! -d data/inria/ANN_SIFT1B ]
@@ -26,7 +26,7 @@ fi
 # compilation
 mkdir -p build
 cd build
-cmake .. -DMATLABROOT=$your_matlab_root_dir
+cmake .. -DMATLABROOT=$matlab_root_dir
 make
 cd ..
 
@@ -85,7 +85,7 @@ exit 0;
 
 # Plots: If you run the following commands inside matlab, it will
 # generate plots similar to the ones in the paper. (Note: this is not
-# a bassh script)
+# a bash script)
 addpath matlab;
 plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat');
 plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], 0, [.01,1000], [0,.1]);
