@@ -9,7 +9,24 @@
 #include "types.h"
 #include "linscan.h"
 
-void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, int N, UINT32 NQ, int B, int R, \
+
+/**
+ * Performs kNN using linear scan in Hamming distance between codes and queries
+ * Inputs:
+ *   N: number of codes in the db
+ *   NQ: number of queries to be answered
+ *   B: number of bits in the db/query codes that should be taken into account in Hamming distance
+ *   K: number of results to be returned for each query ie, k in kNN
+ *   codes: an array of UINT8 storing the db codes
+ *   queries: an array of UINT8 storing the query codes
+ *   dim1codes: number of words in the database codes -- very likely dim1codes = B/8
+ *   dim2codes: number of words in the query codes -- very likely dim2codes = B/8
+ * Outputs:
+ *   counter: int[(B+1)*N], stores the number of db items with different Hamming 
+ *     distances (ranging from 0 to B) from each query.
+ *   res: int[K*N], stores the ids of K nearest neighbors for each query
+ */
+void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, int N, UINT32 NQ, int B, int K,
 		   int dim1codes, int dim1queries) {
 
     int B_over_8 = B / 8;
@@ -17,7 +34,7 @@ void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, i
     UINT32 *ind;         // stores indices arranged based on thir Hamming distances
 
     cum_counter = new int[B+1];
-    ind = new UINT32[R*(B+1)];
+    ind = new UINT32[K*(B+1)];
     memset(counter, 0, (B+1)*NQ*sizeof(*counter));
 
     UINT8 *pqueries = queries;
@@ -30,81 +47,32 @@ void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, i
 		printf("Wrong Hamm distance\n");
 		exit(1);
 	    }
-	    if (counter[h]++ < R)
-		ind[R*h + counter[h] - 1] = j+1;
+	    if (counter[h]++ < K)
+		ind[K*h + counter[h] - 1] = j+1;
     	}
 
     	cum_counter[0] = counter[0];
 	int uptoj = 0;
     	for (int j=1; j<=B; j++) {
     	    cum_counter[j] = cum_counter[j-1] + counter[j];
-	    if (cum_counter[j] >= R && cum_counter[j-1] < R)
+	    if (cum_counter[j] >= K && cum_counter[j-1] < K)
 		uptoj = j;
 	}
 
-	cum_counter[uptoj] = R;	// so we stop at R
+	cum_counter[uptoj] = K;	// so we stop at K
 
 	int indres = 0;
 	for (int h=0; h<=uptoj; h++) {
 	    int ind0 = h == 0 ? 0 : cum_counter[h-1];
 	    
 	    for (int i=ind0; i<cum_counter[h]; i++)
-		res[i] = ind[R*h + i - ind0];
+		res[i] = ind[K*h + i - ind0];
 	}
 	
-    	res += R;
+    	res += K;
     	counter += B+1;
     }
     
     delete [] cum_counter;
     delete [] ind;
 }
-
-// void* threadquery(void*  ptr) {
-//     threadinfo*info = (threadinfo*) ptr;
-//     query(info->threadid, info->counter, info->results, info->q, info->numq);
-//     pthread_exit(NULL);
-// }
-
-// void batchquery(UINT32* counter, UINT32* results, UINT8* q, UINT32 numq, int _numthreads)
-// {
-//     int numthreads = _numthreads;
-
-//     // numqdone = new UINT32 [numthreads];
-//     // for (int i=0; i<numthreads; i++)
-//     // 	numqdone[i] = 0;
-	
-//     if (numthreads > 1) {
-// 	pthread_t* threads = new pthread_t [numthreads];
-// 	threadinfo* tinfo = new threadinfo [numthreads];
-	
-// 	UINT64 tnumq = numq/numthreads;
-// 	for (int i=0; i<numthreads; i++) {
-// 	    tinfo[i].threadid = i;
-// 	    tinfo[i].q = q + (UINT64)(B_over_8)*i*tnumq;
-// 	    tinfo[i].numq = tnumq + ( (i==numthreads-1)? numq % numthreads : 0 );
-// 	    tinfo[i].results = results + (UINT64)R * i * tnumq;
-// 	    tinfo[i].counter = counter + (UINT64)(B+1) * i * tnumq;
-		
-// 	    pthread_create(&threads[i], NULL, threadquery, (void*) &tinfo[i]);
-// 	}
-	
-// 	// UINT32 done = 0;
-// 	// while (done != numq) {
-// 	//     done = 0;
-// 	//     for (int i=0; i<numthreads; i++)
-// 	// 	done += numqdone[i];
-// 	// }
-	
-// 	void* status;
-// 	for (int i=0; i<numthreads; i++)
-// 	    pthread_join(threads[i], &status);
-
-// 	delete [] threads;
-// 	delete [] tinfo;
-//     } else {
-// 	query(0, counter, results, q, numq);
-//     }
-
-//     // delete [] numqdone;
-// }
