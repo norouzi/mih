@@ -84,7 +84,7 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
     fprintf('dataset not supported.\n');
     continue;
   end
-  fprintf('done.');
+  fprintf('done.\n');
 else
   load([CACHE_DIR, '/', dataset_name, '_mean']);
 end
@@ -95,6 +95,7 @@ W = [randn(nb, nd) zeros(nb, 1)];	% Random projection-based hashing (LSH) preser
 nbuffer = 10^6;
 B = zeros(ceil(nb/8), N, 'uint8');
 
+fprintf('Computing %d-bit binary codes:\n', nb);
 for i=1:floor(N/nbuffer)
   fprintf('%d/%d\r', i, floor(N/nbuffer));
   if strcmp(dataset_name, 'sift_1M')

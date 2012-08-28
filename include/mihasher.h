@@ -53,7 +53,7 @@ class mihasher {
 	
     SparseHashtable *H;		// Array of m hashtables;
 		
-    UINT32 *xornum;		// d choose s (for s = 0 to d)
+    UINT32 *xornum;		// Volume of a b-bit Hamming ball with radius s (for s = 0 to d)
 
     int power[100];		// Used within generation of binary codes at a certain Hamming distance
 
