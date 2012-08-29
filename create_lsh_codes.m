@@ -95,7 +95,7 @@ W = [randn(nb, nd) zeros(nb, 1)];	% Random projection-based hashing (LSH) preser
 nbuffer = 10^6;
 B = zeros(ceil(nb/8), N, 'uint8');
 
-fprintf('Computing %d-bit binary codes:\n', nb);
+fprintf('Computing %d-bit binary codes...\n', nb);
 for i=1:floor(N/nbuffer)
   fprintf('%d/%d\r', i, floor(N/nbuffer));
   if strcmp(dataset_name, 'sift_1M')
@@ -135,5 +135,7 @@ else
   Q = compactbit(Q);
 end
 
+fprintf('storing the codes in the file %s.', [outputdir, '/lsh_', num2str(nb), '_', dataset_name]);
 save([outputdir, '/lsh_', num2str(nb), '_', dataset_name], 'B', 'Q', 'W', 'learn_mean', '-v7.3');
 clear B Q W;
+fprintf('done.\n');

@@ -88,5 +88,5 @@ exit 0;
 # a bash script)
 addpath matlab;
 plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat');
-plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], 0, [.01,1000], [0,.1]);
+plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], 0, [.01 1000], [0 .2]);
 plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], .0002, [.01 1000], [0 20]);
