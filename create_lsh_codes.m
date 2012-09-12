@@ -64,7 +64,7 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
     Ntraining = 10^8;
     nbuffer = 10^6;
     for i=1:floor(Ntraining/nbuffer)
-      fprintf('%d/%d\r', i, floor(N/nbuffer));
+      fprintf('%d/%d\r', i, floor(Ntraining/nbuffer));
       trdatai = b2fvecs_read([datahome, '/ANN_SIFT1B/bigann_learn.bvecs'], [(i-1)*nbuffer+1 (i)*nbuffer]);
       learn_meani(:,i) = sum(trdatai, 2, 'double');
     end
