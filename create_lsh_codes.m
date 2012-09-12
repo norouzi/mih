@@ -26,8 +26,11 @@ if (~exist(CACHE_DIR, 'file'))
 end
 
 addpath matlab;
-addpath([TINY_HOME, '/code']);
-addpath([INRIA_HOME, '/matlab']);
+if (strcmp(dataset_name, 'sift_1B') || strcmp(dataset_name, 'sift_1M') || strcmp(dataset_name, 'gist_1M'))
+  addpath([INRIA_HOME, '/matlab']);
+else
+  addpath([TINY_HOME, '/code']);
+end
 
 if strcmp(dataset_name, 'sift_1M')
   dataset = 'ANN_SIFT1M';
