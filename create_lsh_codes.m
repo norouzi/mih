@@ -62,9 +62,10 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
     nbuffer = 10^6;
     for i=1:floor(Ntraining/nbuffer)
       trdatai = b2fvecs_read([datahome, '/ANN_SIFT1B/bigann_learn.bvecs'], [(i-1)*nbuffer+1 (i)*nbuffer]);
-      learn_meani(:,i) = mean(trdatai, 2) * (size(trdatai,2)/nbuffer);
+      learn_meani(:,i) = sum(trdatai, 2, 'double');
     end
-    learn_mean = mean(learn_meani, 2);
+    learn_mean = sum(learn_meani, 2, 'double');
+    learn_mean = single( learn_mean / Ntraining );
     clear trdatai learn_meani;
     save([CACHE_DIR, '/sift_1B_mean'], 'learn_mean');
   elseif strcmp(dataset_name, 'gist_1M')
