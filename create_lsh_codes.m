@@ -55,7 +55,7 @@ elseif strcmp(dataset_name, 'gist_80M')
 end
 
 if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
-  fprintf('Computing the data mean for the given dataset... ');
+  fprintf('Computing the data mean for the %s dataset... \n', dataset_name);
   if strcmp(dataset_name, 'sift_1M')
     trdata = fvecs_read([datahome, '/ANN_SIFT1M/sift/sift_learn.fvecs']);
     learn_mean = mean(trdata, 2);
@@ -64,6 +64,7 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
     Ntraining = 10^8;
     nbuffer = 10^6;
     for i=1:floor(Ntraining/nbuffer)
+      fprintf('%d/%d\r', i, floor(N/nbuffer));
       trdatai = b2fvecs_read([datahome, '/ANN_SIFT1B/bigann_learn.bvecs'], [(i-1)*nbuffer+1 (i)*nbuffer]);
       learn_meani(:,i) = sum(trdatai, 2, 'double');
     end
@@ -88,7 +89,7 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
     fprintf('dataset not supported.\n');
     continue;
   end
-  fprintf('done.\n');
+  fprintf('done.     \n');
 else
   load([CACHE_DIR, '/', dataset_name, '_mean']);
 end
