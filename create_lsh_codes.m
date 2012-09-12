@@ -65,7 +65,7 @@ if ~exist([CACHE_DIR, '/', dataset_name, '_mean.mat'], 'file')
       learn_meani(:,i) = sum(trdatai, 2, 'double');
     end
     learn_mean = sum(learn_meani, 2, 'double');
-    learn_mean = single( learn_mean / Ntraining );
+    learn_mean = learn_mean / Ntraining;
     clear trdatai learn_meani;
     save([CACHE_DIR, '/sift_1B_mean'], 'learn_mean');
   elseif strcmp(dataset_name, 'gist_1M')
