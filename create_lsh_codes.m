@@ -116,7 +116,7 @@ for i=1:floor(N/nbuffer)
   end
   base = bsxfun(@minus, base, learn_mean);
   
-  B1 = (W * [base; ones(1, size(base,2))] > 0);
+  B1 = (W * [base; ones(1, size(base,2))]) > 0;
   B1 = compactbit(B1);
   
   B(:, (i-1)*nbuffer+1:(i)*nbuffer) = B1;
