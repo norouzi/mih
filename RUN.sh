@@ -1,5 +1,7 @@
 # change matlab_root_dir to your matlab root dir
 matlab_root_dir=
+export LD_LIBRARY_PATH=$matlab_root_dir/bin/glnxa64/:$LD_LIBRARY_PATH
+# glnxa64: Assuming that this is a 64-bit linux machine
 
 # add matlab to the PATH if it is not already there
 # download the data, and create data/inria/ folder that includes ANN_SIFT1B folder and files
