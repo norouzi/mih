@@ -114,6 +114,7 @@ for i=1:floor(N/nbuffer)
   elseif strcmp(dataset_name, 'gist_80M')
     base = read_tiny_gist_binary( perm(((i-1)*nbuffer+1):((i)*nbuffer)) );
   end
+  base = double(base);  
   base = bsxfun(@minus, base, learn_mean);
   
   B1 = (W * [base; ones(1, size(base,2))]) > 0;
@@ -140,7 +141,7 @@ else
   Q = compactbit(Q);
 end
 
-fprintf('storing the codes in the file %s.', [outputdir, '/lsh_', num2str(nb), '_', dataset_name]);
+fprintf('storing the codes in the file %s ...', [outputdir, '/lsh_', num2str(nb), '_', dataset_name]);
 save([outputdir, '/lsh_', num2str(nb), '_', dataset_name], 'B', 'Q', 'W', 'learn_mean', '-v7.3');
 clear B Q W;
 fprintf('done.\n');
