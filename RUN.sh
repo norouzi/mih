@@ -35,7 +35,7 @@ fi
 # compilation
 mkdir -p build
 cd build
-cmake ..
+cmake .. -DMATLABROOT=$matlab_root_dir
 make
 cd ..
 
