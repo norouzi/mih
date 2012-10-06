@@ -12,6 +12,7 @@ then
     nb=64;
 fi
 
+echo $nb
 
 # some sanity checks
 if [ "$matlab_root_dir" = "" ]
@@ -66,6 +67,7 @@ then
     nch[12]=2;
 else
     if [ "$nb" = "128" ]
+    then
 	nch[1]=10;
 	nch[2]=8;
 	nch[3]=8;
@@ -80,6 +82,7 @@ else
 	nch[12]=4;
     else
 	if [ "$nb" = "256" ]
+	then
 	    nch[1]=19;
 	    nch[2]=15;
 	    nch[3]=13;
@@ -124,7 +127,7 @@ do
 done
 
 # Testing the results of mih with the results of linscan
-matlab -nojvm -nodisplay -nosplash -r "addpath('test');test_mih_with_linscan($db_file,8,$mih_results,$linscan_results');quit"
+matlab -nojvm -nodisplay -nosplash -r "addpath('test');test_mih_with_linscan('$db_file',$((nb/8)),'$mih_results','$linscan_results');quit"
 if [ $? != 0 ]; then
     echo "Could not run test_mih_with_linscan for some reason... Aborting"
     exit 1
