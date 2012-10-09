@@ -72,8 +72,7 @@ class mihasher {
     void batchquery (UINT32 *results, UINT32 *numres, qstat *stats, UINT8 * q, UINT32 numq, int dim1queries);
    	
  private:
-    void query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *q, UINT64 * chunks, \
-	       UINT32 * res, UINT32 * nres);
+    void query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *q, UINT64 * chunks, UINT32 * res);
 };
 
 #endif

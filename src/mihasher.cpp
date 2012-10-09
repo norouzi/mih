@@ -63,7 +63,7 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
     delete [] chunks;
 }
 
-void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query, UINT64 * chunks, UINT32 * res, UINT32 * nres)
+void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query, UINT64 * chunks, UINT32 * res)
 {
     UINT32 maxres = K ? K : N;			// if K == 0 that means we want everything to be processed.
 						// So maxres = N in that case. Otherwise K limits the results processed.
@@ -81,7 +81,7 @@ void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query
     start = clock();
 
     counter->erase();
-    memset(nres, 0, (D+1)*sizeof(*nres));
+    memset(numres, 0, (B+1)*sizeof(*numres));
 
     split(chunks, query, m, mplus, b);
     
@@ -122,10 +122,10 @@ void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query
 	    			counter->set(index);
 	    			hammd = match(codes + (UINT64)index*(B_over_8), query, B_over_8);
 	    			nc++;
-	    			if (hammd <= D && nres[hammd] < maxres) {
-	    			    res[hammd * K + nres[hammd]] = index + 1;
-	    			    nres[hammd]++;
+	    			if (hammd <= D && numres[hammd] < maxres) {
+	    			    res[hammd * K + numres[hammd]] = index + 1;
 	    			}
+				numres[hammd]++;
 	    		    }
 	    		}
 	    	    }
@@ -140,7 +140,7 @@ void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query
 	    	}
 	    }
 
-	    n = n + nres[s*m+k]; // this line is very tricky ;)
+	    n = n + numres[s*m+k]; // this line is very tricky ;)
 	    // The k'th substring (0 based) is the last chance of an
 	    // item at a Hamming distance of s*m+k to be
 	    // found. Because if until the k'th substring, an item
@@ -163,14 +163,13 @@ void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query
 
     n = 0;
     for (s = 0; s <= D && n < K; s++ ) {
-	for (int c = 0; c < nres[s] && n < K; c++ )
+	for (int c = 0; c < numres[s] && n < K; c++)
 	    results[n++] = res[s*K + c];
     }
 
     UINT32 total = 0;
     stats->maxrho = -1;
-    for (int i=0; i<=D; i++) {
-	numres[i] = nres[i];
+    for (int i=0; i<=B; i++) {
 	total += numres[i];
 	if (total >= K && stats->maxrho == -1)
 	    stats->maxrho = i;
@@ -184,7 +183,6 @@ void mihasher::batchquery(UINT32 *results, UINT32 *numres, qstat *stats, UINT8 *
     counter->init(N);
 
     UINT32 *res  = new UINT32[K*(D+1)];
-    UINT32 *nres = new UINT32[D+1];
     UINT64 *chunks = new UINT64[m];
 
     UINT32 *presults = results;
@@ -193,7 +191,7 @@ void mihasher::batchquery(UINT32 *results, UINT32 *numres, qstat *stats, UINT8 *
     UINT8 *pq = queries;
 
     for (int i=0; i<numq; i++) {
-	query(presults, pnumres, pstats, pq, chunks, res, nres);
+	query(presults, pnumres, pstats, pq, chunks, res);
 
 	presults += K;
 	pnumres += B+1;
@@ -202,7 +200,6 @@ void mihasher::batchquery(UINT32 *results, UINT32 *numres, qstat *stats, UINT8 *
     }
 	
     delete [] res;
-    delete [] nres;
     delete [] chunks;
 
     delete counter;
