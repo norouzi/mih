@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project (mih)
 
-set (CMAKE_CXX_FLAGS "-O3 -DNDEBUG")
+set (CMAKE_CXX_FLAGS "-O2 -DNDEBUG")
 
 # Relying on LD_LIBRARY_PATH to find the libs
 FIND_LIBRARY (MATLAB_MAT_LIBRARY mat ENV LD_LIBRARY_PATH)
