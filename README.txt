@@ -9,17 +9,6 @@ efficiency of our previous implementation explained in the paper by utilizing
 sparse hash tables. (http://www.cs.toronto.edu/~norouzi/research/mih/)
 
 
-~~~~~~~~~~~~~~ Compilation
-
-You need make, cmake, and matlab headers and libraries, to build this project. Go
-into the build folder and run:
-
-cmake .. -DMATLABROOT=your_matlab_root_dir
-make
-
-This should generate two binary files: mih and linscan
-
-
 ~~~~~~~~~~~~~~ Datasets
 
 Download the INRIA bigann dataset (1 billion SIFT features) from
@@ -38,8 +27,25 @@ snippet. See create_lsh_codes.m for more details.
 
 ~~~~~~~~~~~~~~ Usage
 
-~~~ RUN.sh: is a bash script that provides an example run of the
-program for 64-bit codes.
+~~~ RUN.sh: is a bash script that compiles the code, and provides an
+example run of the program for 64-bit codes. For 128-bit and 256-bit
+experiments, you could set the bash variable "nb" to 128 or 256, and
+export it, and then RUN.sh will perform the experiments with "$nb"
+bits.
+
+
+Compilation:
+
+You need make, cmake, and matlab headers and libraries, to build this
+project. Take a look at RUN.sh and set the variable "matlab_root_dir"
+to point to your matlab root dir. Generally, for compilation, you need
+to go into the build folder and run:
+
+cmake .. -DMATLABROOT=your_matlab_root_dir
+make
+
+This should generate two binary files: mih and linscan. RUN.sh should
+run the above commands for you.
 
 ~~~ linscan: provides an efficient implementation of exhaustive linear scan for
 kNN in Hamming distance on binary codes. (for comparison)
