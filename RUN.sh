@@ -39,7 +39,7 @@ cd ..
 
 # creation of the binary codes
 # runs matlab, and then create_lsh_codes script inside it.
-matlab -nojvm -nodisplay -nosplash -r "nb=$nb;create_lsh_codes;quit"
+$matlab_root_dir/bin/matlab -nojvm -nodisplay -nosplash -r "nb=$nb;create_lsh_codes;quit"
 if [ $? != 0 ]; then
     echo "Could not run matlab to create lsh codes... Aborting"
     exit 1
@@ -125,7 +125,7 @@ do
 done
 
 # Testing the results of mih with the results of linscan
-matlab -nojvm -nodisplay -nosplash -r "addpath('test');test_mih_with_linscan('$db_file',$((nb/8)),'$mih_results','$linscan_results');quit"
+$matlab_root_dir/bin/matlab -nojvm -nodisplay -nosplash -r "addpath('test');test_mih_with_linscan('$db_file',$((nb/8)),'$mih_results','$linscan_results');quit"
 if [ $? != 0 ]; then
     echo "Could not run test_mih_with_linscan for some reason... Aborting"
     exit 1
