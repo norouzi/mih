@@ -9,6 +9,8 @@ typedef unsigned int UINT32;
 typedef unsigned short UINT16;
 typedef unsigned char UINT8;
 
+typedef double REAL;
+
 /* typedef uint64_t UINT64; */
 /* typedef uint32_t UINT32; */
 /* typedef uint16_t UINT16; */
