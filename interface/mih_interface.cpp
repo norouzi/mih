@@ -4,23 +4,26 @@
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
-
-#include "mat.h"
+#include <assert.h>
 
 #include "types.h"
 #include "mihasher.h"
 #include "memusage.h"
+#include "io.h"
+
+#include "reorder.h"
 
 int main (int argc, char**argv) {
     if (argc < 3) {
-	printf ("Usage:\n\nmih <infile> <outfile> [options]\n\n");
-	printf ("Options:\n");
-	printf (" -nMs <n1 n2 n3 ...>  Set an array of multiples of 'one million items' to experiment with\n");
-	printf (" -nM <number>         Set the index from the nMs array to be used for this run (1 is the first)\n");
-	printf (" -Q <number>          Set the number of query points to use from <infile>, default all\n");
-	printf (" -B <number>          Set the number of bits per code, default autodetect\n");
-	printf (" -m <number>          Set the number of chunks to use, default 1\n");
-	printf ("\n");
+	printf("Usage:\n\nmih <infile> <outfile> [options]\n\n");
+	printf("Options:\n");
+	printf(" -N <number>          Set the number of binary codes from the beginning of the dataset file to be used\n");
+	printf(" -Q <number>          Set the number of query points to use from <infile>, default all\n");
+	printf(" -B <number>          Set the number of bits per code, default autodetect\n");
+	printf(" -m <number>          Set the number of chunks to use, default 1\n");
+	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
+	printf(" -R <number>          Set the number of codes (in Millions) to use in computing the optimal bit reordering, default OFF (0)\n");
+	printf("\n");
 	return 0;
     }
 
@@ -28,13 +31,11 @@ int main (int argc, char**argv) {
     char *outfile = argv[2];
 		
     UINT32 N = 0;
+    UINT32 NQ = 0, Q0 = 0, Q1 = 0;
     int B = 0;
     int m = 1;
-    UINT32 K = 100;
-    int nM = 0;
-    int NQ = 0;
-    double *nMs = NULL;
-    int nnMs = 0;
+    UINT32 K = -1;
+    size_t R = 0;
 	
     for (int argnum = 3; argnum < argc; argnum++) {
 	if (argv[argnum][0] == '-') {
@@ -45,251 +46,222 @@ int main (int argc, char**argv) {
 	    case 'K':
 		K = atoi(argv[++argnum]);
 		break;
-	    case 'n':
-		if (!strcmp(argv[argnum], "-nMs")) {
-		    nMs = new double[100];
-		    while (++argnum < argc)
-			if (argv[argnum][0] != '-') {
-			    nMs[nnMs++] = atof(argv[argnum]);
-			} else {
-			    argnum--;
-			    break;
-			}
-		} else if (!strcmp(argv[argnum], "-nM")) {
-		    nM = atoi(argv[++argnum]);
-		}
+	    case 'N':
+		N = atoi(argv[++argnum]);
 		break;
 	    case 'Q':
-		NQ = atoi(argv[++argnum]);
+		Q0 = atoi(argv[++argnum]);
+		if (++argnum < argc) {
+		    if (argv[argnum][0] != '-') {
+			Q1 = atof(argv[argnum]);
+		    } else {
+			argnum--;
+			Q1 = Q0;
+			Q0 = 0;
+		    }
+		}
+		NQ = Q1-Q0;
 		break;
 	    case 'm':
 		m = atoi(argv[++argnum]);
 		break;
+	    case 'R':
+		R = atoi(argv[++argnum])*1000000;
+		break;
 	    default: 
-		printf ("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
+		printf("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
 		return EXIT_FAILURE;
 	    }
 	} else {
-	    printf ("Invalid Argument: %s\n", argv[argnum]);
+	    printf("Invalid Argument: %s\n", argv[argnum]);
 	    return EXIT_FAILURE;
 	}
     }
 
-    MATFile *ifp = NULL;
-    mxArray *mxnMs = NULL;
-    mxArray *mxret = NULL;
-    /* Opening output file to read "ret" and "nMs" if available */
-    ifp = matOpen(outfile, "r");
-    if (ifp) {
-	mxnMs = matGetVariable(ifp, "nMs");
-	mxret = matGetVariable(ifp, "ret");
-
-	double *nMs2 = (double*)mxGetPr(mxnMs);
-	int nnMs2 = mxGetN(mxnMs);
-
-	if (nMs != NULL) {
-	    if (nnMs != nnMs2) {
-		printf("#nMs is different from the #nMs read from the output file %d vs. %d.\n", nnMs, nnMs2);
-		return EXIT_FAILURE;
-	    }
-	    for (int i=0; i<nnMs; i++)
-		if (int(nMs[i]*1.0e6) !=  int(nMs2[i] * 1.0e6)) {
-		    printf("nMs are different from the nMs read from the output file.\n");
-		    return EXIT_FAILURE;
-		}
-	    delete[] nMs;
-	}
-
-	nnMs = nnMs2;
-	nMs = nMs2;
-	matClose (ifp);
-    } else {
-	mxnMs = mxCreateNumericMatrix(1, nnMs, mxDOUBLE_CLASS, mxREAL);
-	double *nMs2 = (double*)mxGetPr(mxnMs);
-	for (int i=0; i<nnMs; i++)
-	    nMs2[i] = nMs[i];
-	delete[] nMs;
-	nMs = nMs2;
+    if (!NQ) {
+    	printf("-Q is required.\n");
+    	return EXIT_FAILURE;
+    }
+    
+    if (B % 8 != 0) {		// in case of B == 0 this should be fine
+	printf("Non-multiple of 8 code lengths are not currently supported.\n");
+	return EXIT_FAILURE;
     }
 
-    if (mxret == NULL) {
-	const char* ab[] = {"res", "nres", "stat", "wt", "cput", "vm", "rss", "m"};
-	mxret = mxCreateStructMatrix(1000, nnMs, 8, ab);
+    if (R > N) {
+    	printf("R was greater than N, R will now be equal to N.\n");
+    	R = N;
     }
-    /* Done with initializing mxnMs and mxret and sanity checks */
+
+    if (K < 1 || K > N) {
+	printf("A valid K is not provided.\n");
+	return EXIT_FAILURE;
+    }
+
+    int B_over_8 = B/8;
+    /* Done with initialization and sanity checks */
 
     /* Loading the codes and queries from the input file */	
-    ifp = matOpen (infile, "r");
-    if (!ifp) {
-	printf ("Failed to open input file. Aborting.\n");
-	return EXIT_FAILURE;
-    }
+    UINT8 *codes_db;
+    int dim1codes;
+    UINT8 *codes_query;
+    int dim1queries;
+    
+    printf("Loading codes... ");
+    fflush(stdout);
 
-    printf ("Loading codes... ");
-    fflush (stdout);
-    mxArray *mxcodes = matGetVariable (ifp, "B");
-    printf ("done.\n");
-		
-    printf ("Loading queries... ");
-    fflush (stdout);
-    mxArray *mxqueries = matGetVariable (ifp, "Q");
-    printf ("done.\n");
-    matClose (ifp);
+    codes_db = (UINT8*)malloc((size_t)N * (B/8) * sizeof(UINT8));
+    load_bin_codes(infile, "B", codes_db, &N, &B_over_8);
+    if (B == 0)
+	B = B_over_8 * 8; /* in this case B_over_8 is set within load_bin_codes */
+    dim1codes = B/8;
+
+    printf("done.\n");
+    printf("Loading queries... ");
+    fflush(stdout);
+
+    codes_query = (UINT8*)malloc((size_t)NQ * (B/8) * sizeof(UINT8));
+    load_bin_codes(infile, "Q", codes_query, &NQ, &B_over_8, Q0);
+    dim1queries = B/8;
+
+    printf("done.\n");
     /* Done with the inputs */
-	
-    int dim1codes = mxGetM(mxcodes);
-    int dim1queries = mxGetM(mxqueries);
-    if (!B)
-	B = mxGetM(mxcodes)*8;
-    if (B % 8 != 0) {
-	printf ("Non-multiple of 8 code lengths are not currently supported.\n");
-	return EXIT_FAILURE;
-    }
-    N = 1.0e6 * nMs[nM-1];
-    if (N)
-	N = std::min ( (UINT32)N, (UINT32)mxGetN(mxcodes) );
-    if (NQ > 0)
-	NQ = std::min( NQ, (int)mxGetN(mxqueries) );
-    else
-	NQ = mxGetN (mxqueries);
-	
-    printf("nM = %d |", nM);
-    printf(" N = %.0e |", (double)N);
-    printf(" NQ = %d |", NQ);
+
+    printf("N = %.0e |", (double)N);
+    printf(" NQ = %d, range [%d %d) |", NQ, Q0, Q1);
     printf(" B = %d |", B);
-    printf(" m = %d", m);
+    printf(" K = %4d |", K);
+    printf(" m = %2d |", m);
+    printf(" R = %d", (int)R);
     printf("\n");
-		
-    /* Run multi-index hashing for 1,10,100,1000 NN and store the required stats */
-    int mold = -1;
-    mihasher* MIH = NULL;
+
+    /* Run multi-index hashing for K-nearest neighbor search and store the required stats */
+    mihasher *MIH = NULL;
     clock_t start0, end0;
     time_t start1, end1;
     qstat *stats = (qstat*) new qstat[NQ];
 
-    for (K = 1; K<=1000; K *= 10) {
-	mxArray *mxresults = mxCreateNumericMatrix (K, NQ, mxUINT32_CLASS, mxREAL);
-	mxArray *mxnumres = mxCreateNumericMatrix (B+1, NQ, mxUINT32_CLASS, mxREAL);
-	mxArray *mxctime = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-	mxArray *mxwtime = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-	mxArray *mxvm  = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-	mxArray *mxrss = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-	mxArray *mxstats = mxCreateNumericMatrix (6, NQ, mxDOUBLE_CLASS, mxREAL);
+    result_t result;
+    result.n = N;
+    result.nq = NQ;
+    result.k = K;
+    result.b = B;
+    result.m = m;
+    result.q0 = Q0;
+    result.q1 = Q1;
+    result.wt = -1;
+    result.cput = -1;
+    result.vm = -1;
+    result.rss = -1;
+    result.res = NULL;
+    result.nres = NULL;
+    result.stats = NULL;
 
-	UINT32 *numres = (UINT32*) mxGetPr (mxnumres);
-	UINT32 *results = (UINT32*) mxGetPr (mxresults);
-	double *ctime = (double*) mxGetPr (mxctime);
-	double *wtime = (double*) mxGetPr (mxwtime);	    	    
-	double *vm  = (double*) mxGetPr (mxvm);
-	double *rss = (double*) mxGetPr (mxrss);	    	    
-	double *stats_d = (double*) mxGetPr (mxstats);
-	    
-	/* if m changes from K to K */
-	if (mold != m) {
-	    if (MIH != NULL) {
-		printf ("Clearing up... ");
-		fflush (stdout);
-		delete MIH;
-		printf ("done.          \r");
-		fflush (stdout);
-	    }
+    result.res = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+    result.res[0] = (UINT32 *) malloc(sizeof(UINT32)*K*NQ);
+    for (size_t i=1; i<NQ; i++)
+	result.res[i] = result.res[i-1] + K;
 
-	    MIH = new mihasher(B, m);
-		
-	    printf ("Populating %d hashtables with %.0e entries...\n", m, (double)N);
-	    fflush (stdout);
-	    start1 = time(NULL);
-	    start0 = clock();
-	    
-	    MIH->populate ( (UINT8*) mxGetPr(mxcodes), N, dim1codes);
-	    
-	    end0 = clock();
-	    end1 = time(NULL);
+    result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+    result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*(B+1)*NQ);
+    for (size_t i=1; i<NQ; i++)
+	result.nres[i] = result.nres[i-1] + (B+1);
 
-	    double ct = (double)(end0-start0) / (CLOCKS_PER_SEC);
-	    double wt = (double)(end1-start1);
-
-	    printf ("done. | cpu %.0fm%.0fs | wall %.0fm%.0fs\n", ct/60, ct-60*int(ct/60), wt/60, wt-60*int(wt/60));
-	    // printf ("done.                                            \r");
-	    // fflush (stdout);
-	}
-
-	printf(" m = %2d |", m);
-	printf(" K = %4d |", K);
-	printf(" ");
-	MIH->setK(K);
-
-	printf("query... ");
-	fflush (stdout);
-	    
-	start1 = time(NULL);
-	start0 = clock();
-	    
-	MIH->batchquery (results, numres, stats, (UINT8*) mxGetPr(mxqueries), NQ, dim1queries);
-	    
-	end0 = clock();
-	end1 = time(NULL);
-
-	*ctime = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
-	*wtime = (double)(end1-start1) / NQ;
-	process_mem_usage(vm, rss);
-	*vm  /= double(1024*1024);
-	*rss /= double(1024*1024);
-	printf ("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", *ctime, *wtime, *vm, *rss);
-
-	int ind = 1000*(nM-1) + K-1;
-
-	double *pstats_d = stats_d;
-	for (int i=0; i<NQ; i++) {
-	    pstats_d[0] = stats[i].numres;
-	    pstats_d[1] = stats[i].numcand;
-	    pstats_d[2] = stats[i].numdups;
-	    pstats_d[3] = stats[i].numlookups;
-	    pstats_d[4] = stats[i].maxrho;
-	    pstats_d[5] = (double) stats[i].ticks / CLOCKS_PER_SEC;
-
-	    pstats_d += 6;
-	}
-
-	mxSetFieldByNumber(mxret, ind, 0, mxresults);
-	mxSetFieldByNumber(mxret, ind, 1, mxnumres);
-	mxSetFieldByNumber(mxret, ind, 2, mxstats);
-	mxSetFieldByNumber(mxret, ind, 3, mxwtime);
-	mxSetFieldByNumber(mxret, ind, 4, mxctime);
-	mxSetFieldByNumber(mxret, ind, 5, mxvm);
-	mxSetFieldByNumber(mxret, ind, 6, mxrss);
-	mxSetFieldByNumber(mxret, ind, 7, mxCreateDoubleScalar(m));
-
-	mold = m;
+    result.stats = (double **) malloc(sizeof(double*)*NQ);
+    result.stats[0] = (double *) malloc(sizeof(double)*STAT_DIM*NQ);
+    for (size_t i=1; i<NQ; i++)
+	result.stats[i] = result.stats[i-1] + STAT_DIM;
+    
+    MIH = new mihasher(B, m);
+    
+    if (R) {
+	printf("Computing greedy reordering using %.0e codes... \n", (double)R); fflush(stdout);
+	int * order = new int [B];
+	greedyorder(order, codes_db, R, B, m);
+	printf("Done.\n");  fflush(stdout);
+	printf("Reordering %.0e codes... ", (double)N);  fflush(stdout);
+	UINT8* codes_db_R = (UINT8*)malloc((size_t)N * (B/8) * sizeof(UINT8));
+	UINT8* codes_query_R = (UINT8*)malloc((size_t)NQ * (B/8) * sizeof(UINT8));
+	reorder(codes_db_R, codes_db, N, B, order);
+	reorder(codes_query_R, codes_query, NQ, B, order);
+	free(codes_db);
+	free(codes_query);
+	delete[] order;
+	codes_db = codes_db_R;
+	codes_query = codes_query_R;
+	printf("Done.\n"); fflush(stdout);
     }
-    printf ("Clearing up... ");
+    
+    printf("Populating %d hashtables with %.0e entries...\n", m, (double)N);
+    fflush (stdout);
+    start1 = time(NULL);
+    start0 = clock();
+    
+    MIH->populate(codes_db, N, dim1codes);
+	    
+    end0 = clock();
+    end1 = time(NULL);
+    
+    double ct = (double)(end0-start0) / (CLOCKS_PER_SEC);
+    double wt = (double)(end1-start1);
+    
+    printf("done. | cpu %.0fm%.0fs | wall %.0fm%.0fs\n", ct/60, ct-60*int(ct/60), wt/60, wt-60*int(wt/60));
+
+    MIH->setK(K);
+
+    printf("query... ");
+    fflush (stdout);
+    
+    start1 = time(NULL);
+    start0 = clock();
+    
+    MIH->batchquery(result.res[0], result.nres[0], stats, codes_query, NQ, dim1queries);
+    
+    end0 = clock();
+    end1 = time(NULL);
+    
+    result.cput = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
+    result.wt = (double)(end1-start1) / NQ;
+    process_mem_usage(&result.vm, &result.rss);
+    result.vm  /= double(1024*1024);
+    result.rss /= double(1024*1024);
+    printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
+
+    double *pstats_d = result.stats[0];
+    for (int i=0; i<NQ; i++) {
+    	pstats_d[0] = stats[i].numres;
+    	pstats_d[1] = stats[i].numcand;
+    	pstats_d[2] = stats[i].numdups;
+    	pstats_d[3] = stats[i].numlookups;
+    	pstats_d[4] = stats[i].maxrho;
+    	pstats_d[5] = (double) stats[i].ticks / CLOCKS_PER_SEC;	
+    	pstats_d += 6;
+    }
+
+    printf("Clearing up... ");
     fflush (stdout);
     delete MIH;
-    printf ("done.          \r");
+    printf("done.          \r");
     fflush (stdout);
     /* Done with mulit-index hashing and storing the stats */
 	
     /* Opening the output file for writing the results */
-    MATFile *ofp = matOpen (outfile, "w");
-    if (!ofp) {
-	printf ("Failed to create/open output file. Aborting.\n");
-	return EXIT_FAILURE;
-    }
-			
     printf("Writing results to file %s... ", outfile);
     fflush(stdout);
-    matPutVariable(ofp, "nMs", mxnMs);
-    matPutVariable(ofp, "ret", mxret);
+
+    saveRes(outfile, "mih", &result, 1, 2);
+
     printf("done.\n");
-    matClose(ofp);
     /* Done with the output file */
 
     delete[] stats;
-    mxDestroyArray (mxnMs);
-    mxDestroyArray (mxret);
-    mxDestroyArray (mxcodes);
-    mxDestroyArray (mxqueries);
-    /* skip deleting nMs if it is initialized by new double[] */
+
+    free(codes_query);
+    free(codes_db);
+    free(result.res[0]);
+    free(result.res);
+    free(result.nres[0]);
+    free(result.nres);
 
     return 0;
 }
