@@ -26,53 +26,70 @@
  *     distances (ranging from 0 to B) from each query.
  *   res: int[K*N], stores the ids of K nearest neighbors for each query
  */
-void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, int N, UINT32 NQ, int B, int K,
+void linscan_query(UINT32 *counter, UINT32 *res, UINT8 *codes, UINT8 *queries, int N, UINT32 NQ, int B, unsigned int K,
 		   int dim1codes, int dim1queries) {
 
     int B_over_8 = B / 8;
-    int *cum_counter;    // cumulative counter
+    unsigned int *cum_counter;    // cumulative counter
     UINT32 *ind;         // stores indices arranged based on thir Hamming distances
+    UINT8 *pqueries = queries;
+    UINT32 *pcounter = counter;
+    UINT32 *pres = res;
 
-    cum_counter = new int[B+1];
-    ind = new UINT32[K*(B+1)];
     memset(counter, 0, (B+1)*NQ*sizeof(*counter));
 
-    UINT8 *pqueries = queries;
+    unsigned int i=0;
+#ifndef SINGLE_CORE
+#pragma omp parallel shared(i) private(cum_counter, ind, pqueries, pres, pcounter)
+#endif
+    {
+	cum_counter = new unsigned int[B+1];
+	ind = new UINT32[K*(B+1)];
+#ifndef SINGLE_CORE
+#pragma omp for
+#endif
+	for (i=0; i<NQ; i++) {
+#ifndef SINGLE_CORE
+	    pqueries = queries + (UINT64)i*(UINT64)dim1queries;
+	    pres = res + (UINT64)i*(UINT64)K;
+	    pcounter = counter + (UINT64)i*(UINT64)(B+1);
+#endif
 
-    for (int i=0; i<NQ; i++, pqueries += dim1queries) {
-    	UINT8 *pcodes = codes;
-    	for (int j=0; j<N; j++, pcodes += dim1codes) {
-    	    int h = match(pcodes, pqueries, B_over_8);
-	    if (h > B || h < 0) {
-		printf("Wrong Hamm distance\n");
-		exit(1);
+	    UINT8 *pcodes = codes;
+	    for (int j=0; j<N; j++, pcodes += dim1codes) {
+		int h = match(pcodes, pqueries, B_over_8);
+		if (h > B || h < 0) {
+		    printf("Wrong Hamm distance\n");
+		    exit(1);
+		}
+		if (pcounter[h]++ < K)
+		    ind[K*h + pcounter[h] - 1] = j;
 	    }
-	    if (counter[h]++ < K)
-		ind[K*h + counter[h] - 1] = j+1;
-    	}
-
-    	cum_counter[0] = counter[0];
-	int uptoj = 0;
-    	for (int j=1; j<=B; j++) {
-    	    cum_counter[j] = cum_counter[j-1] + counter[j];
-	    if (cum_counter[j] >= K && cum_counter[j-1] < K)
-		uptoj = j;
-	}
-
-	cum_counter[uptoj] = K;	// so we stop at K
-
-	int indres = 0;
-	for (int h=0; h<=uptoj; h++) {
-	    int ind0 = h == 0 ? 0 : cum_counter[h-1];
 	    
-	    for (int i=ind0; i<cum_counter[h]; i++)
-		res[i] = ind[K*h + i - ind0];
+	    cum_counter[0] = pcounter[0];
+	    int uptoj = 0;
+	    for (int j=1; j<=B; j++) {
+		cum_counter[j] = cum_counter[j-1] + pcounter[j];
+		if (cum_counter[j] >= K && cum_counter[j-1] < K)
+		    uptoj = j;
+	    }
+	    
+	    cum_counter[uptoj] = K;	// so we stop at K
+	    
+	    for (int h=0; h<=uptoj; h++) {
+		int ind0 = h == 0 ? 0 : cum_counter[h-1];
+		
+		for (unsigned int j=ind0; j<cum_counter[h]; j++)
+		    pres[j] = ind[K*h + j - ind0];
+	    }
+	    
+#ifdef SINGLE_CORE
+	    pres += K;
+	    pcounter += B+1;
+	    pqueries += dim1queries;
+#endif
 	}
-	
-    	res += K;
-    	counter += B+1;
+	delete [] cum_counter;
+	delete [] ind;
     }
-    
-    delete [] cum_counter;
-    delete [] ind;
 }
