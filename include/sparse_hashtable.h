@@ -27,7 +27,17 @@ class SparseHashtable {
 	
     void insert(UINT64 index, UINT32 data);
 
+    void lazy_insert(UINT64 index, UINT32 data);
+
     UINT32* query(UINT64 index, int* size);
+
+    void cleanup_insert(UINT8* dataset, int m, int k, int mplus, int b, int dim1codes);
+
+    void count_insert(UINT64 index, UINT32 data);
+
+    void allocate_mem_based_on_counts();
+
+    void data_insert(UINT64 index, UINT32 data);
 
 };
 
