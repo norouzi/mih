@@ -5,212 +5,182 @@
 #include <time.h>
 #include <string.h>
 
-#include "mat.h"
-
 #include "types.h"
 #include "linscan.h"
+#include "memusage.h"
+#include "io.h"
 
 int main (int argc, char**argv) {
     if (argc < 3) {
-	printf ("Usage:\n\nlinscan <infile> <outfile> [options]\n\n");
-	printf ("Options:\n");
-	printf (" -nMs <n1 n2 n3 ...>  Set an array of multiples of a million of items to experiment with\n");
-	printf (" -nM <number>         Set the index from the nMs array to be used for this run (1 is the first)\n");
-	printf (" -Q <number>          Set number of query points to use from <infile>, default all\n");
-	printf (" -B <number>          Set number of bits per code, default autodetect\n");
-	printf ("\n");
+	printf("Usage:\n\nmih <infile> <outfile> [options]\n\n");
+	printf("Options:\n");
+	printf(" -N <number>          Set the number of binary codes from the beginning of the dataset file to be used\n");
+	printf(" -Q <number>          Set the number of query points to use from <infile>, default all\n");
+	printf(" -B <number>          Set the number of bits per code, default autodetect\n");
+	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
+	printf("\n");
 	return 0;
-    } else {
-	char *infile = argv[1];
-	char *outfile = argv[2];
-		
-	UINT32 N = 0;
-	int B = 0;
-	UINT32 K = 100;
-	int nM = 0;
-	int NQ = 0;
-	double *nMs = NULL;
-	int nnMs = 0;
+    }
 
-	for (int argnum = 3; argnum < argc; argnum++) {
-	    // printf("%d '%s'\n", argnum, argv[argnum]);
-	    if (argv[argnum][0] == '-') {
-		switch (argv[argnum][1]  *(argc > argnum + 1)) {
-		case 'B':
-		    B = atoi(argv[++argnum]);
-		    break;
-		case 'K':
-		    K = atoi(argv[++argnum]);
-		    break;
-		case 'n':
-		    if (!strcmp(argv[argnum], "-nMs")) {
-		    	nMs = new double[100];
-		    	while (++argnum < argc)
-			    if (argv[argnum][0] != '-') {
-				nMs[nnMs++] = atof(argv[argnum]);
-			    } else {
-				argnum--;
-				break;
-			    }
-		    } else if (!strcmp(argv[argnum], "-nM"))
-			nM = atoi(argv[++argnum]);
-		    break;
-		case 'Q':
-		    NQ = atoi(argv[++argnum]);
-		    break;
-		default: 
-		    printf ("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
-		    return EXIT_FAILURE;
+    char *infile = argv[1];
+    char *outfile = argv[2];
+		
+    UINT32 N = 0;
+    UINT32 NQ = 0, Q0 = 0, Q1 = 0;
+    int B = 0;
+    UINT32 K = -1;
+
+    for (int argnum = 3; argnum < argc; argnum++) {
+	if (argv[argnum][0] == '-') {
+	    switch (argv[argnum][1]) {
+	    case 'B':
+		B = atoi(argv[++argnum]);
+		break;
+	    case 'K':
+		K = atoi(argv[++argnum]);
+		break;
+	    case 'N':
+		N = atoi(argv[++argnum]);
+		break;
+	    case 'Q':
+		Q0 = atoi(argv[++argnum]);
+		if (++argnum < argc) {
+		    if (argv[argnum][0] != '-') {
+			Q1 = atof(argv[argnum]);
+		    } else {
+			argnum--;
+			Q1 = Q0;
+			Q0 = 0;
+		    }
 		}
-	    } else {
-		printf ("Invalid Argument: %s\n", argv[argnum]);
+		NQ = Q1-Q0;
+		break;
+	    default: 
+		printf("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
 		return EXIT_FAILURE;
 	    }
-	}
-
-	MATFile *ifp = NULL;
-	mxArray *mxnMs = NULL, *mxlinscan = NULL;
-	/* Opening output file to read "linscan" and "nMs" if available */
-	ifp = matOpen(outfile, "r");
-	if (ifp) {
-	    mxnMs = matGetVariable(ifp, "nMs");
-	    mxlinscan = matGetVariable(ifp, "linscan");
-
-	    double *nMs2 = (double*)mxGetPr(mxnMs);
-	    int nnMs2 = mxGetN(mxnMs);
-
-	    if (nMs != NULL) {
-		if (nnMs != nnMs2) {
-		    printf("#nMs is different from the #nMs read from the output file.\n");
-		    return EXIT_FAILURE;
-		}
-		for (int i=0; i<nnMs; i++)
-		    if (int(nMs[i]*1.0e6) !=  int(nMs2[i] * 1.0e6)) {
-			printf("nMs are different from the nMs read from the output file.\n");
-			return EXIT_FAILURE;
-		    }
-		delete[] nMs;
-	    }
-
-	    nnMs = nnMs2;
-	    nMs = nMs2;
-	    matClose (ifp);
 	} else {
-	    mxnMs = mxCreateNumericMatrix(1, nnMs, mxDOUBLE_CLASS, mxREAL);
-	    double *nMs2 = (double*)mxGetPr(mxnMs);
-	    for (int i=0; i<nnMs; i++)
-		nMs2[i] = nMs[i];
-	    delete[] nMs;
-	    nMs = nMs2;
-	}
-
-	if (mxlinscan == NULL) {
-	    const char *ab[] = {"res", "nres", "wt", "cput", "nq"};
-	    mxlinscan = mxCreateStructMatrix(1, nnMs, 5, ab);
-	}
-	/* Done with initializing mxnMs and mxlinscan and sanity checks */
-
-	/* Loading the codes and queries from the input file */	
-	ifp = matOpen (infile, "r");
-	if (!ifp) {
-	    printf ("Failed to open input file. Aborting.\n");
+	    printf("Invalid Argument: %s\n", argv[argnum]);
 	    return EXIT_FAILURE;
 	}
-
-	printf ("Loading codes... ");
-	fflush (stdout);
-	mxArray *mxcodes = matGetVariable (ifp, "B");
-	printf ("done.\n");
-		
-	printf ("Loading queries... ");
-	fflush (stdout);
-	mxArray *mxqueries = matGetVariable (ifp, "Q");
-	printf ("done.\n");
-	matClose (ifp);
-	/* Done with the inputs */
-	
-	int dim1codes = mxGetM(mxcodes);
-	int dim1queries = mxGetM(mxqueries);
-	if (!B)
-	    B = mxGetM(mxcodes)*8;
-	if (B % 8 != 0) {
-	    printf ("Non-multiple of 8 code lengths are not currently supported.\n");
-	    return EXIT_FAILURE;
-	}
-	N = 1.0e6 * nMs[nM-1];
-	if (N)
-	    N = std::min ( (UINT32)N, (UINT32)mxGetN(mxcodes) );
-	if (NQ > 0)
-	    NQ = std::min( NQ, (int)mxGetN(mxqueries) );
-	else
-	    NQ = mxGetN (mxqueries);
-	
-	printf("nM = %d |", nM);
-	printf(" N = %.0e |", (double)N);
-	printf(" NQ = %d |", NQ);
-	printf(" B = %d |", B);
-	printf(" K = %d", K);
-	printf("\n");
-		
-	/* Run linear scan and store the required stats */
-	mxArray *mxcounter = mxCreateNumericMatrix (B+1, NQ, mxUINT32_CLASS, mxREAL);
-	mxArray *mxres = mxCreateNumericMatrix (K, NQ, mxUINT32_CLASS, mxREAL);
-	mxArray *mxctime = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-	mxArray *mxwtime = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
-
-	UINT32 *counter = (UINT32*) mxGetPr(mxcounter);
-	UINT32 *res = (UINT32*) mxGetPr(mxres);
-	double *ctime = (double*) mxGetPr(mxctime);
-	double *wtime = (double*) mxGetPr(mxwtime);
-	
-	printf("query... ");
-	fflush (stdout);
-	clock_t start0, end0;
-	time_t start1, end1;
-	
-	start1 = time(NULL);
-	start0 = clock();
-	
-	linscan_query(counter, res, (UINT8*)mxGetPr(mxcodes), (UINT8*)mxGetPr(mxqueries), N, NQ, B, K, \
-		      dim1codes, dim1queries);
-	
-	end0 = clock();
-	end1 = time(NULL);
-	
-	*ctime = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
-	*wtime = (double)(end1-start1) / NQ;
-	printf ("done | cpu %.3fs | wall %.3fs.      \n", *ctime, *wtime);
-	
-	int ind = (nM-1);
-	const char* ab[] = {"res", "nres", "wt", "cput", "nq"};
-	mxSetFieldByNumber(mxlinscan, ind, 0, mxres);
-	mxSetFieldByNumber(mxlinscan, ind, 1, mxcounter);
-	mxSetFieldByNumber(mxlinscan, ind, 2, mxwtime);
-	mxSetFieldByNumber(mxlinscan, ind, 3, mxctime);
-	mxSetFieldByNumber(mxlinscan, ind, 4, mxCreateDoubleScalar(NQ));
-	/* Done with linear scan and storing the stats */
-	
-	/* Opening the output file for writing the results */
-	MATFile *ofp = matOpen (outfile, "w");
-	if (!ofp) {
-	    printf ("Failed to create/open output file. Aborting.\n");
-	    return EXIT_FAILURE;
-	}
-			
-	printf("Writing results to file %s... ", outfile);
-	fflush(stdout);
-	matPutVariable(ofp, "nMs", mxnMs);
-	matPutVariable(ofp, "linscan", mxlinscan);
-	printf("done.\n");
-	matClose(ofp);
-	/* Done with the output file */
-
-	mxDestroyArray (mxnMs);
-	mxDestroyArray (mxlinscan);
-	mxDestroyArray (mxcodes);
-	mxDestroyArray (mxqueries);
-	/* skip deleting nMs if it is initialized by new double[] */
     }
+
+    if (!NQ) {
+	printf("-Q is required.\n");
+	return EXIT_FAILURE;
+    }
+
+    if (B % 8 != 0) {		// in case of B == 0 this should be fine
+	printf("Non-multiple of 8 code lengths are not currently supported.\n");
+	return EXIT_FAILURE;
+    }
+
+    if (K < 1 || K > N) {
+	printf("A valid K is not provided.\n");
+	return EXIT_FAILURE;
+    }
+
+    int B_over_8 = B/8;
+    /* Done with initialization and sanity checks */
+
+    /* Loading the codes and queries from the input file */
+    UINT8 *codes_db;
+    int dim1codes;
+    UINT8 *codes_query;
+    int dim1queries;
+
+    printf("Loading codes... ");
+    fflush (stdout);
+
+    codes_db = (UINT8*)malloc((size_t)N * (B / 8) * sizeof(UINT8));
+    load_bin_codes(infile, "B", codes_db, &N, &B_over_8);
+    if (B == 0)
+	B = B_over_8 * 8; /* in this case B_over_8 is set within load_bin_codes */
+    dim1codes = B / 8;
+
+    printf("done.\n");
+    printf("Loading queries... ");
+    fflush (stdout);
+
+    codes_query = (UINT8*)malloc((size_t)NQ * (B/8) * sizeof(UINT8));
+    load_bin_codes(infile, "Q", codes_query, &NQ, &B_over_8, Q0);
+    dim1queries = B/8;
+
+    printf("done.\n");
+    /* Done with the inputs */
+
+    printf("N = %.0e |", (double)N);
+    printf(" NQ = %d, range [%d %d) |", NQ, Q0, Q1);
+    printf(" B = %d |", B);
+    printf(" K = %4d |", K);
+    printf("\n");
+
+    /* Run linear scan and store the required stats */
+    clock_t start0, end0;
+    time_t start1, end1;
+	
+    printf("query... ");
+    fflush (stdout);
+
+    result_t result;
+    result.n = N;
+    result.nq = NQ;
+    result.k = K;
+    result.b = B;
+    result.m = -1;		// m is irrelevant to linear scan
+    result.q0 = Q0;
+    result.q1 = Q1;
+    result.wt = -1;
+    result.cput = -1;
+    result.vm = -1;
+    result.rss = -1;
+    result.res = NULL;
+    result.nres = NULL;
+
+    result.res = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+    result.res[0] = (UINT32 *) malloc(sizeof(UINT32)*K*NQ);
+    for (size_t i=1; i<NQ; i++)
+	result.res[i] = result.res[i-1] + K;
+
+    result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+    result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*(B+1)*NQ);
+    for (size_t i=1; i<NQ; i++)
+	result.nres[i] = result.nres[i-1] + (B+1);
+
+    result.stats = NULL;
+
+    start1 = time(NULL);
+    start0 = clock();
+
+    linscan_query(result.nres[0], result.res[0], codes_db, codes_query, N, NQ, B, K,
+		  dim1codes, dim1queries);
+
+    end0 = clock();
+    end1 = time(NULL);
+
+    result.cput = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
+    result.wt = (double)(end1-start1) / NQ;
+    process_mem_usage(&result.vm, &result.rss);
+    result.vm  /= double(1024*1024);
+    result.rss /= double(1024*1024);
+    printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
+    /* Done with linear scan and storing the results */
+
+    /* Opening the output file for writing the results */
+    printf("Writing results to file %s... ", outfile);
+    fflush(stdout);
+
+    saveRes(outfile, "linscan", &result, 1, 2);
+
+    printf("done.\n");
+    /* Done with the output file */
+
+    free(codes_query);
+    free(codes_db);
+    free(result.res[0]);
+    free(result.res);
+    free(result.nres[0]);
+    free(result.nres);
 
     return 0;
 }
