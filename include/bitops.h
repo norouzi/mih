@@ -15,20 +15,16 @@ inline int match(UINT8*P, UINT8*Q, int codelb) {
     switch(codelb) {
     case 4: // 32 bit
 	return popcnt(*(UINT32*)P ^ *(UINT32*)Q);
-	break;
     case 8: // 64 bit
 	return popcntll(((UINT64*)P)[0] ^ ((UINT64*)Q)[0]);
-	break;
     case 16: // 128 bit
 	return popcntll(((UINT64*)P)[0] ^ ((UINT64*)Q)[0]) \
 	    + popcntll(((UINT64*)P)[1] ^ ((UINT64*)Q)[1]);
-	break;
     case 32: // 256 bit
 	return popcntll(((UINT64*)P)[0] ^ ((UINT64*)Q)[0]) \
 	    + popcntll(((UINT64*)P)[1] ^ ((UINT64*)Q)[1]) \
 	    + popcntll(((UINT64*)P)[2] ^ ((UINT64*)Q)[2]) \
 	    + popcntll(((UINT64*)P)[3] ^ ((UINT64*)Q)[3]);
-	break;
     case 64: // 512 bit
 	return popcntll(((UINT64*)P)[0] ^ ((UINT64*)Q)[0]) \
 	    + popcntll(((UINT64*)P)[1] ^ ((UINT64*)Q)[1]) \
@@ -38,16 +34,12 @@ inline int match(UINT8*P, UINT8*Q, int codelb) {
 	    + popcntll(((UINT64*)P)[5] ^ ((UINT64*)Q)[5]) \
 	    + popcntll(((UINT64*)P)[6] ^ ((UINT64*)Q)[6]) \
 	    + popcntll(((UINT64*)P)[7] ^ ((UINT64*)Q)[7]);
-	break;
     default:
 	int output = 0;
 	for (int i=0; i<codelb; i++) 
 	    output+= lookup[P[i] ^ Q[i]];
 	return output;
-	break;
     }
-
-    return -1;
 }
 
 /* b <= 64 */
@@ -73,8 +65,9 @@ inline void split (UINT64 *chunks, UINT8 *code, int m, int mplus, int b) {
 }
 
 /* generates the next binary code (in alphabetical order) with the
-   same number of ones as the input x. Taken from
-   http://www.geeksforgeeks.org/archives/10375 */
+ * same number of ones as the input x. Taken from
+ * http://www.geeksforgeeks.org/archives/10375
+ */
 inline UINT64 next_set_of_n_elements(UINT64 x) {
     UINT64 smallest, ripple, new_smallest;
 
