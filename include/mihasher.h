@@ -14,15 +14,15 @@
 #include "sparse_hashtable.h"
 #include "bitarray.h"
 
-struct qstat {
+#define STAT_DIM 6		/* Dimensionality of stats, it has STAT_DIM many fields */
 
+struct qstat {
     UINT32 numres;		// Total number of returned results
     UINT32 numcand;		// Number of hamming distance computations executed
     UINT32 numdups;		// Number of candidates skipped because they were duplicates
     UINT32 numlookups;
     UINT32 maxrho;		// Largest distance that was searched exhaustively
     clock_t ticks;		// Number of clock ticks spent on each query
-	
 };
 
 class mihasher {
