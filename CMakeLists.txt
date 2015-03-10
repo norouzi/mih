@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
 project (mih)
 
-find_library (HDF5_LIB hdf5 SHARED)
-message (STATUS ${HDF5_LIB})
+find_library (HDF5_LIB hdf5)
 
-set (CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG") # -Wall -march=native -mtune=native")
+set (CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG")
+# -Wall -march=native -mtune=native")
 
 include_directories ("${PROJECT_SOURCE_DIR}/include")
 
