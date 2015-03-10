@@ -1,25 +1,36 @@
-# change matlab_root_dir to your matlab root dir
-matlab_root_dir=
-export LD_LIBRARY_PATH=$matlab_root_dir/bin/glnxa64/:$LD_LIBRARY_PATH
-# glnxa64: Assuming that this is a 64-bit linux machine
-
 # add matlab to the PATH if it is not already there
 # download the data, and create data/inria/ folder that includes ANN_SIFT1B folder and files
 
 # if number of bits (nb) is not provided from outside, set it to 64
 if [ -z "$nb" ]
 then
-    nb=64;
+    nb=64
+fi
+
+if [ -z "$hashfunc" ]
+then
+    hashfunc="lsh"
+fi
+
+if [ -z "$Q0" ]
+then
+    Q0=0
+    Q1=10000
+fi
+
+if [ -z "$R" ]
+then
+    R=0
+fi
+
+if [ -z "$HUGE" ]  # this is page size for libhugetlbfs
+then
+    HUGE=0
 fi
 
 echo $nb
 
 # some sanity checks
-if [ "$matlab_root_dir" = "" ]
-then
-    echo "set matlab_root_dir to your matlab root dir."
-    exit 1
-fi
 if [ ! -d data/inria/ANN_SIFT1B ]
 then
     echo "data/inria/ANN_SIFT1B does not exist."
@@ -31,125 +42,115 @@ then
     exit 1
 fi
 
+build_dir="build_`hostname`"
+cache_dir="cache_`hostname`"
 
 # compilation
-mkdir -p build
-cd build
-cmake .. -DMATLABROOT=$matlab_root_dir
+mkdir -p $build_dir
+mkdir -p $cache_dir
+mkdir -p $cache_dir/$nb
+
+cd $build_dir
+cmake ..
 make
 cd ..
 
-# creation of the binary codes
-# runs matlab, and then create_lsh_codes script inside it.
-matlab -nojvm -nodisplay -nosplash -r "nb=$nb;create_lsh_codes;quit"
-if [ $? != 0 ]; then
-    echo "Could not run matlab to create lsh codes... Aborting"
-    exit 1
-fi
-
 # Multi-index hashing is being run for 12 different subsets of the
 # binary codes (10K 100K 1M 2M 5M 10M 20M 100M 200M 500M 1B
-# items). Number of substrings to be used for each case is stored in a
-# bash array nch.
-if [ "$nb" = "64" ]
+# items).
+n[1]=10000
+n[2]=100000
+n[3]=1000000
+n[4]=2000000
+n[5]=5000000
+n[6]=10000000
+n[7]=20000000
+n[8]=50000000
+n[9]=100000000
+n[10]=200000000
+n[11]=500000000
+n[12]=1000000000
+
+# Number of substrings to be used for each case is stored in a
+# bash array m.
+if [ "$nb" == "64" ]
 then
-    nch[1]=5;
-    nch[2]=4;
-    nch[3]=4;
-    nch[4]=3;
-    nch[5]=3;
-    nch[6]=3;
-    nch[7]=3;
-    nch[8]=2;
-    nch[9]=2;
-    nch[10]=2;
-    nch[11]=2;
-    nch[12]=2;
+    m[1]=5
+    m[2]=4
+    m[3]=4
+    m[4]=3
+    m[5]=3
+    m[6]=3
+    m[7]=3
+    m[8]=2
+    m[9]=2
+    m[10]=2
+    m[11]=2
+    m[12]=2
 else
-    if [ "$nb" = "128" ]
+    if [ "$nb" == "128" ]
     then
-	nch[1]=10;
-	nch[2]=8;
-	nch[3]=8;
-	nch[4]=6;
-	nch[5]=6;
-	nch[6]=5;
-	nch[7]=5;
-	nch[8]=5;
-	nch[9]=5;
-	nch[10]=4;
-	nch[11]=4;
-	nch[12]=4;
+	m[1]=10
+	m[2]=8
+	m[3]=8
+	m[4]=6
+	m[5]=6
+	m[6]=5
+	m[7]=5
+	m[8]=5
+	m[9]=5
+	m[10]=4
+	m[11]=4
+	m[12]=4
     else
-	if [ "$nb" = "256" ]
+	if [ "$nb" == "256" ]
 	then
-	    nch[1]=19;
-	    nch[2]=15;
-	    nch[3]=13;
-	    nch[4]=12;
-	    nch[5]=11;
-	    nch[6]=11;
-	    nch[7]=10;
-	    nch[8]=10;
-	    nch[9]=10;
-	    nch[10]=9;
-	    nch[11]=9;
-	    nch[12]=8;
+	    m[1]=19
+	    m[2]=15
+	    m[3]=13
+	    m[4]=12
+	    m[5]=11
+	    m[6]=11
+	    m[7]=10
+	    m[8]=10
+	    m[9]=10
+	    m[10]=9
+	    m[11]=9
+	    m[12]=8
 	else
-	    echo "nb = $nb is not supported";
+	    echo "nb == $nb is not supported"
 	fi
     fi
 fi
 
-db_file="codes/lsh/lsh_"$nb"_sift_1B.mat";
-mih_results="cache/mih_"$nb"_1B.mat";
-linscan_results="cache/linscan_"$nb"_1B.mat";
+db_file="codes/"$hashfunc"/"$hashfunc"_"$nb"_sift_1B.mat"
+mih_results="$cache_dir/$nb/mih_"$hashfunc"_"$Q0"_"$Q1"_1B_R"$R".h5"
+linscan_results="$cache_dir/$nb/linscan_"$Q0"_"$Q1"_1B.h5"
+
+if [ "$HUGE" != "0" ]
+    echo "*** HUGE $HUGE ***"
+fi
 
 for ((nm=1; nm<=12; nm=nm+1))
-do 
-    build/mih $db_file $mih_results  -Q 1000 -nMs 0.01 0.10 1 2 5 10 20 50 100 200 500 1000 -nM $nm -m ${nch[$nm]}
+do
+    for ((K=1; K<=1000; K=K*10))
+    do
+	echo $build_dir/mih $db_file $mih_results -B $nb -Q $Q0 $Q1 -K $K \
+            -N ${n[$nm]} -m ${m[$nm]} -R $R
+        if [ "$HUGE" = "0" ]
+        then
+            $build_dir/mih $db_file $mih_results -B $nb -Q $Q0 $Q1 -K $K \
+                -N ${n[$nm]} -m ${m[$nm]} -R $R
+        else
+            LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=$HUGE $build_dir/mih \
+                $db_file $mih_results -B $nb -Q $Q0 $Q1 -K $K -N ${n[$nm]} \
+                -m ${m[$nm]} -R $R
+        fi
+    done
     if [ $? != 0 ]; then
 	echo "Could not run mih for some reason... Aborting"
 	exit 1
     fi
 done
 
-# Linear scan is being run for 12 different subsets of the binary
-# codes. The number of queries is set to 100 (-Q 100) to increase the
-# speed. The K in K-NN is set to 1000 (-K 1000)
-for ((nm=1; nm<=12; nm=nm+1))
-do
-    build/linscan $db_file $linscan_results -Q 100 -nMs 0.01 0.10 1 2 5 10 20 50 100 200 500 1000 -nM $nm -K 1000
-    if [ $? != 0 ]; then
-	echo "Could not run linscan for some reason... Aborting"
-	exit 1
-    fi
-done
-
-# Testing the results of mih with the results of linscan
-matlab -nojvm -nodisplay -nosplash -r "addpath('test');test_mih_with_linscan('$db_file',$((nb/8)),'$mih_results','$linscan_results');quit"
-if [ $? != 0 ]; then
-    echo "Could not run test_mih_with_linscan for some reason... Aborting"
-    exit 1
-fi
-exit 0;
-
-# Plots: If you run the following commands inside matlab, it will
-# generate plots similar to the ones in the paper. (Note: this is not
-# a bash script)
-addpath matlab;
-plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat');
-plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], 0, [.01 1000], [0 .2]);
-plot_time('cache/mih_64_1B.mat', 'cache/linscan_64_1B.mat', [], .0002, [.01 1000], [0 20]);
-
-
-addpath matlab;
-plot_time('cache/mih_mlh_128_1B.mat', 'cache/linscan_mlh_128_1B.mat');
-plot_time('cache/mih_mlh_128_1B.mat', 'cache/linscan_mlh_128_1B.mat', [], 0, [.01 1000], [0 1.1]);
-plot_time('cache/mih_mlh_128_1B.mat', 'cache/linscan_mlh_128_1B.mat', [], .0002, [.01 1000], [0 30]);
-
-
-addpath matlab;
-plot_time('cache/mih_256_1B.mat', 'cache/linscan_256_1B.mat');
-plot_time('cache/mih_256_1B.mat', 'cache/linscan_256_1B.mat', [], 0, [.01 1000], [0 1.1]);
-plot_time('cache/mih_256_1B.mat', 'cache/linscan_256_1B.mat', [], .0002, [.01 1000], [0 30]);
+exit 0
