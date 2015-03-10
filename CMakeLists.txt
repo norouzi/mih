@@ -8,7 +8,7 @@ set (CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG") # -Wall -march=nativ
 
 include_directories ("${PROJECT_SOURCE_DIR}/include")
 
-add_executable (mih src/array32.cpp src/mihasher.cpp src/sparse_hashtable.cpp src/bucket_group.cpp interface/mih_interface.cpp interface/loadVar.cpp interface/saveRes.cpp src/reorder.cpp)
+add_executable (mih src/array32.cpp src/mihasher.cpp src/sparse_hashtable.cpp src/bucket_group.cpp interface/mih_interface.cpp interface/loadVar.cpp interface/saveRes.cpp)
 target_link_libraries (mih ${HDF5_LIB})
 
 project (linscan)
