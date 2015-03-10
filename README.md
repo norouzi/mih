@@ -3,17 +3,18 @@ Multi Index Hashing (MIH)
 
 An implementation of *"Fast Exact Search in Hamming Space with
 Multi-Index Hashing, M. Norouzi, A. Punjani, D. J. Fleet, IEEE TPAMI
-2014"*. http://www.cs.toronto.edu/~norouzi/research/mih/
+2014"*. See http://www.cs.toronto.edu/~norouzi/research/mih/.
 
 This algorithm performs fast exact nearest neighbor search in Hamming
 distance on binary codes. Using this code, one can re-run the
 experiments described in the paper. For best results, consider using
-*libhugetlbfs*, which we ignore here.
+*libhugetlbfs* with multi-index hashing.
 
 ### Compilation
 
-You need make, cmake, and hdf5 library, to build this project. Create
-a folder called build, and run:
+You need make, cmake, hdf5 library, hdf5-dev package to build this
+project. To compile, create a folder called `build`, and run:
+
 ```
 cd build
 rm * -rf
@@ -117,8 +118,8 @@ of m for different number of codes in the datasets.
 
 ### License
 
-Copyright (c) 2012, Mohammad Norouzi <mohammad.n@gmail.com> and Ali Punjani
-<alipunjani@cs.toronto.edu>. This is a free software; for license information
+Copyright (c) 2012, Mohammad Norouzi [<mohammad.n@gmail.com>] and Ali Punjani
+[<alipunjani@cs.toronto.edu>]. This is a free software; for license information
 please refer to license.txt file.
 
 ### TODO
