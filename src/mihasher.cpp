@@ -47,7 +47,8 @@ void mihasher::batchquery(UINT32 *results, UINT32 *numres, qstat *stats, UINT8 *
     delete counter;
 }
 
-// Temp variables: chunks, res -- we did not want to malloc inside
+
+// Temp variables: chunks, res -- I did not want to malloc inside
 // query, so these arrays are passed from outside
 
 void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query, UINT64 *chunks, UINT32 *res)
@@ -127,7 +128,7 @@ void mihasher::query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *query
 	    	}
 	    }
 
-	    n = n + numres[s*m+k]; // this line is very tricky ;)
+	    n = n + numres[s*m+k]; // This line is very tricky ;)
 	    // The k'th substring (0 based) is the last chance of an
 	    // item at a Hamming distance of s*m+k to be
 	    // found. Because if until the k'th substring, an item
@@ -206,21 +207,64 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
 {
     N = _N;
     codes = _codes;
-    UINT64 * chunks = new UINT64[m];
 
-    UINT8 * pcodes = codes;
-    for (UINT64 i=0; i<N; i++, pcodes += dim1codes) {
-	split(chunks, pcodes, m, mplus, b);
+    int k = 0;
+//#pragma omp parallel shared(k)
+    {
+	UINT64 * chunks = new UINT64[m];
+//#pragma omp for
+	for (k=0; k<m; k++) {
+	    UINT8 * pcodes = codes;
 
-	for (int k=0; k<m; k++)
-	    H[k].insert(chunks[k], i);
+	    for (UINT64 i=0; i<N; i++) {
+		split(chunks, pcodes, m, mplus, b);
+		
+		H[k].count_insert(chunks[k], i);
 
-	if (i % (int)ceil(N/1000) == 0) {
-	    printf("%.2f%%\r", (double)i/N * 100);
-	    fflush(stdout);
+		if (i % (int)ceil(N/1000) == 0) {
+		    printf("%.2f%%\r", (double)i/N * 100);
+		    fflush(stdout);
+		}
+		pcodes += dim1codes;
+	    }
+
+	    // for (int k=0; k<m; k++)
+	    // 	H[k].allocate_mem_based_on_counts();
+	    
+	    pcodes = codes;
+	    for (UINT64 i=0; i<N; i++) {
+		split(chunks, pcodes, m, mplus, b);
+
+		H[k].data_insert(chunks[k], i);
+
+		if (i % (int)ceil(N/1000) == 0) {
+		    printf("%.2f%%\r", (double)i/N * 100);
+		    fflush(stdout);
+		}
+		pcodes += dim1codes;
+	    }
 	}
+	 
+	delete [] chunks;
     }
-	
-    delete [] chunks;
-}
 
+    // N = _N;
+    // codes = _codes;
+    // UINT64 * chunks = new UINT64[m];
+
+    // UINT8 * pcodes = codes;
+    // for (UINT64 i=0; i<N; i++, pcodes += dim1codes) {
+    // 	split(chunks, pcodes, m, mplus, b);
+
+    // 	for (int k=0; k<m; k++)
+    // 	    H[k].lazy_insert(chunks[k], i);
+    // 	if (i % (int)ceil(N/1000) == 0) {
+    // 	    printf("%.2f%%\r", (double)i/N * 100);
+    // 	    fflush(stdout);
+    // 	}
+    // }
+
+    // for (int k=0; k<m; k++)
+    // 	H[k].cleanup_insert(codes, m, k, mplus, b, dim1codes);
+    // delete [] chunks;
+}
