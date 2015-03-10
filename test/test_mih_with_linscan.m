@@ -41,7 +41,8 @@ for inM = 1:numel(nMs)
       end
            
       if (mih.ret(R, inM).stat(5,q) ~= dists_mih(end))
-	error('largest Hamming distance does not match the statistics returned');
+	fprintf('largest Hamming distance does not match the statistics returned (%d ~= %d)', mih.ret(R, inM).stat(5,q), dists_mih(end));
+	error('');
       end
       
       if (~isempty(linscan.linscan(inM).res))
