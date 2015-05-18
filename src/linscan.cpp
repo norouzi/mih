@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bitops.h"
 #include "types.h"
