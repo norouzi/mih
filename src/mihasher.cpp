@@ -221,7 +221,7 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
 		
 		H[k].count_insert(chunks[k], i);
 
-		if (i % (int)ceil(N/1000) == 0) {
+		if (i % (int)ceil((double)N/1000) == 0) {
 		    printf("%.2f%%\r", (double)i/N * 100);
 		    fflush(stdout);
 		}
@@ -237,7 +237,7 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
 
 		H[k].data_insert(chunks[k], i);
 
-		if (i % (int)ceil(N/1000) == 0) {
+		if (i % (int)ceil((double)N/1000) == 0) {
 		    printf("%.2f%%\r", (double)i/N * 100);
 		    fflush(stdout);
 		}
@@ -258,7 +258,7 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
 
     // 	for (int k=0; k<m; k++)
     // 	    H[k].lazy_insert(chunks[k], i);
-    // 	if (i % (int)ceil(N/1000) == 0) {
+    // 	if (i % (int)ceil((double)N/1000) == 0) {
     // 	    printf("%.2f%%\r", (double)i/N * 100);
     // 	    fflush(stdout);
     // 	}
